@@ -139,8 +139,7 @@ local function parseMidi()
             if status_byte < 0x80 then
                 -- Running Status: Status Byte 被省略，当前字节是 Data Byte 1
                 rewind_byte = true
-                --print(string.format("DEBUG: Tick=%d, Status Byte skipped (0x%X). Using Running Status 0x%X.", 
-                                    track_time_ticks, status_byte, running_status))
+                --print(string.format("DEBUG: Tick=%d, Status Byte skipped (0x%X). Using Running Status 0x%X.", track_time_ticks, status_byte, running_status))
             else
                 -- 新的 Status Byte
                 running_status = status_byte
