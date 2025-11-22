@@ -96,8 +96,7 @@ local function parseMidi()
     })
 
     --print(string.format("MIDI Format: %d | Num Tracks: %d | Ticks/QN: %d", format, num_tracks, tpqn_division))
-    --print(string.format("Relay Range (36 slots): %d (C3) to %d (B5). Relays %d to %d.", 
-                        LOWEST_SUPPORTED_PITCH, HIGHEST_SUPPORTED_PITCH, INDEX_START + 1, INDEX_START + RANGE_SIZE))
+    --print(string.format("Relay Range (36 slots): %d (C3) to %d (B5). Relays %d to %d.", LOWEST_SUPPORTED_PITCH, HIGHEST_SUPPORTED_PITCH, INDEX_START + 1, INDEX_START + RANGE_SIZE))
     --print("---------------------------------------")
     
     -- 2. 解析 MIDI Track Chunks (MTrk)
@@ -168,8 +167,7 @@ local function parseMidi()
                 local velocity = string.byte(data_bytes, 2)
                 
                 -- 【调试关键点】记录读取到的原始字节
-                --print(string.format("DEBUG: Raw Note: Pitch Byte=0x%X (%d), Velocity Byte=0x%X (%d). Status=0x%X", 
-                    pitch, pitch, velocity, velocity, status_byte))
+                --print(string.format("DEBUG: Raw Note: Pitch Byte=0x%X (%d), Velocity Byte=0x%X (%d). Status=0x%X", pitch, pitch, velocity, velocity, status_byte))
                 
                 -- --- Pitch Mapping Logic ---
                 
@@ -349,8 +347,7 @@ local function playMidi(tpqn_division)
             if event.time_ticks >= last_event_time_ticks and event.mpqn ~= current_mpqn then
                 current_mpqn = event.mpqn
                 seconds_per_tick = (current_mpqn / 1000000) / tpqn_division
-                --print(string.format("  [TEMPO] Absolute Time Ticks: %d, New MPQN=%d (BPM=%.2f), New Seconds/Tick=%.6f", 
-                                    event.time_ticks, current_mpqn, 60000000 / current_mpqn, seconds_per_tick))
+                --print(string.format("  [TEMPO] Absolute Time Ticks: %d, New MPQN=%d (BPM=%.2f), New Seconds/Tick=%.6f", event.time_ticks, current_mpqn, 60000000 / current_mpqn, seconds_per_tick))
             end
         end
         
@@ -388,14 +385,7 @@ local function playMidi(tpqn_division)
                 
                 relay.setOutput("front", output_state)
                 -- 打印详细的映射信息
-                --print(string.format("T=%.4f s | %s: Original %s (MIDI %d) -> Mapped to %s (Offset: %d, Relay ID: %d)", 
-                                    current_abs_time_seconds, 
-                                    event.type:upper(), 
-                                    event.note_name, 
-                                    event.pitch, 
-                                    event.mapped_note_name,
-                                    event.pitch_for_relay_offset, 
-                                    relay_id))
+                --print(string.format("T=%.4f s | %s: Original %s (MIDI %d) -> Mapped to %s (Offset: %d, Relay ID: %d)", current_abs_time_seconds, event.type:upper(), event.note_name, event.pitch, event.mapped_note_name,event.pitch_for_relay_offset, relay_id))
             end
         end
         
