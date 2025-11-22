@@ -1,23 +1,10 @@
---[[
-  MIDI 音符识别器
-  使用 CC: Tweaked 的 io 库读取 MIDI 二进制文件，解析 Note On/Off 事件，
-  提取完整的音高名称和八度 (例如: C#4)，并将 Delta Time 转换为秒。
-  
-  核心改进：
-  1. 实现了多音轨事件的合并和绝对时间排序，确保同步播放。
-  2. 增加了 Note Off 事件处理，确保音符能够停止。
-  3. 改进了 Set Tempo 事件的处理，确保节奏变化在正确的时间点生效。
-  4. 【新增】支持三个独立的八度音高 (36个继电器)。
+print("Input file name:")
+local FILENAME = read()
+local INDEX_START = 39  -- 为第一个连接的id-1
 
-  注意：位操作符（&）已替换为算术和取模运算，以保持与标准 Lua 5.1/5.2 的兼容性。
---]]
-
-local FILENAME = "4.mid"
-local INDEX_START = 39  -- 为第一个连接的id-1 (第一个继电器ID将是 INDEX_START + 1)
-
--- 定义支持的音高范围 (例如：从 C3 到 B5，共 36 个音符)
 local LOWEST_SUPPORTED_PITCH = 48 -- C3
 local HIGHEST_SUPPORTED_PITCH = 83 -- B5
+local OFFSET = 24
 
 -- 完整的音名映射 (包含升降号)
 local NOTE_NAMES_VERBOSE = {
@@ -172,37 +159,24 @@ local function parseMidi()
                 if data_bytes and #data_bytes == 2 then
                     local pitch = string.byte(data_bytes, 1)
                     local velocity = string.byte(data_bytes, 2)
-                    
-                    -- !!! 核心改动：检查音高是否在支持的范围内 !!!
-                    if pitch >= LOWEST_SUPPORTED_PITCH and pitch <= HIGHEST_SUPPORTED_PITCH then
-                        local pitch_id = pitch % 12
-                        local octave = math.floor(pitch / 12) - 1 
-                        local note_name = NOTE_NAMES_VERBOSE[pitch_id] .. octave
-                        
-                        -- 计算继电器的偏移量 (1 到 36)
-                        local pitch_for_relay_offset = pitch - LOWEST_SUPPORTED_PITCH + 1
-                        
-                        local event_type = "note_off"
-                        if status_byte >= 0x90 and velocity > 0 then
-                            event_type = "note_on"
-                            notes_in_track = notes_in_track + 1
-                        end
+                    local pitch_for_relay_offset = (pitch + OFFSET) % 36
+                    local note_name = NOTE_NAMES_VERBOSE[(pitch_for_relay_offset+1)%12] .. tostring(math.floor((pitch_for_relay_offset+1)/12))
 
-                        -- 收集 Note Event
-                        table.insert(event_list, {
-                            type = event_type,
-                            time_ticks = track_time_ticks,
-                            pitch = pitch,
-                            -- pitch_for_relay_offset 是 1-36 的值，对应继电器 ID 的偏移
-                            pitch_for_relay_offset = pitch_for_relay_offset,
-                            velocity = velocity,
-                            note_name = note_name
-                        })
-                    else
-                        -- 忽略范围外的音高
-                        file:read(2)
-                        print(string.format("  Skipping note: Pitch %d is outside the supported range (%d-%d).", pitch, LOWEST_SUPPORTED_PITCH, HIGHEST_SUPPORTED_PITCH))
+                    local event_type = "note_off"
+                    if status_byte >= 0x90 and velocity > 0 then
+                        event_type = "note_on"
+                        notes_in_track = notes_in_track + 1
                     end
+                    -- 收集 Note Event
+                    table.insert(event_list, {
+                        type = event_type,
+                        time_ticks = track_time_ticks,
+                        pitch = pitch,
+                        pitch_for_relay_offset = pitch_for_relay_offset,
+                        velocity = velocity,
+                        note_name = note_name
+                    })
+
                 end
                 
             elseif (status_byte >= 0xA0 and status_byte <= 0xEF) then
@@ -303,7 +277,7 @@ local function playMidi(tpqn_division)
             if event.time_ticks >= last_event_time_ticks and event.mpqn ~= current_mpqn then
                 current_mpqn = event.mpqn
                 seconds_per_tick = (current_mpqn / 1000000) / tpqn_division
-                print(string.format("  [TEMPO] Absolute Time Ticks: %d, New MPQN=%d (BPM=%.2f), New Seconds/Tick=%.6f", 
+                print(string.format("[TEMPO] Absolute Time Ticks: %d, New MPQN=%d (BPM=%.2f), New Seconds/Tick=%.6f", 
                                     event.time_ticks, current_mpqn, 60000000 / current_mpqn, seconds_per_tick))
             end
         end
