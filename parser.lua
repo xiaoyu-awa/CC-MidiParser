@@ -12,7 +12,7 @@
   注意：位操作符（&）已替换为算术和取模运算，以保持与标准 Lua 5.1/5.2 的兼容性。
 --]]
 
-local FILENAME = "2.mid"
+local FILENAME = "4.mid"
 local INDEX_START = 39  -- 为第一个连接的id-1 (第一个继电器ID将是 INDEX_START + 1)
 
 -- 定义支持的音高范围 (例如：从 C3 到 B5，共 36 个音符)
