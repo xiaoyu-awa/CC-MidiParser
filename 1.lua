@@ -54,11 +54,11 @@ local function parseMidi()
     
     local file, err = io.open(FILENAME, "rb")
     if not file then
-        print("ERROR: Could not open file " .. FILENAME .. ": " .. tostring(err))
+        --print("ERROR: Could not open file " .. FILENAME .. ": " .. tostring(err))
         return
     end
 
-    print("--- Parsing MIDI file: " .. FILENAME .. " ---")
+    --print("--- Parsing MIDI file: " .. FILENAME .. " ---")
     
     -- 1. 解析 MIDI Header Chunk (MThd)
     local header_id = file:read(4) -- 'MThd'
@@ -68,7 +68,7 @@ local function parseMidi()
     local division_str = file:read(2)
     
     if header_id ~= "MThd" or not header_size_str then
-        print("ERROR: File is not a valid MIDI file or is too short.")
+        --print("ERROR: File is not a valid MIDI file or is too short.")
         file:close()
         return
     end
@@ -81,7 +81,7 @@ local function parseMidi()
     -- 检查 Division 的高位，确保是 TPQN 格式 (Ticks Per Quarter Note)
     local tpqn_division = division
     if tpqn_division >= 0x8000 then
-        print("WARNING: SMPTE time code detected (not TPQN). Tempo calculation may be inaccurate.")
+        --print("WARNING: SMPTE time code detected (not TPQN). Tempo calculation may be inaccurate.")
         tpqn_division = tpqn_division % 0x8000
     end
     
@@ -95,22 +95,22 @@ local function parseMidi()
         mpqn = default_mpqn
     })
 
-    print(string.format("MIDI Format: %d | Num Tracks: %d | Ticks/QN: %d", format, num_tracks, tpqn_division))
-    print(string.format("Relay Range (36 slots): %d (C3) to %d (B5). Relays %d to %d.", 
+    --print(string.format("MIDI Format: %d | Num Tracks: %d | Ticks/QN: %d", format, num_tracks, tpqn_division))
+    --print(string.format("Relay Range (36 slots): %d (C3) to %d (B5). Relays %d to %d.", 
                         LOWEST_SUPPORTED_PITCH, HIGHEST_SUPPORTED_PITCH, INDEX_START + 1, INDEX_START + RANGE_SIZE))
-    print("---------------------------------------")
+    --print("---------------------------------------")
     
     -- 2. 解析 MIDI Track Chunks (MTrk)
     local total_notes_found = 0
 
     for track_idx = 1, num_tracks do
-        print(string.format(">>> Processing Track #%d <<<", track_idx))
+        --print(string.format(">>> Processing Track #%d <<<", track_idx))
 
         local track_id = file:read(4) -- 'MTrk'
         local track_size_str = file:read(4)
 
         if track_id ~= "MTrk" or not track_size_str then
-            print("WARNING: Expected MTrk identifier, but file may have ended or format is incorrect.")
+            --print("WARNING: Expected MTrk identifier, but file may have ended or format is incorrect.")
             break
         end
 
@@ -140,12 +140,12 @@ local function parseMidi()
             if status_byte < 0x80 then
                 -- Running Status: Status Byte 被省略，当前字节是 Data Byte 1
                 rewind_byte = true
-                print(string.format("DEBUG: Tick=%d, Status Byte skipped (0x%X). Using Running Status 0x%X.", 
+                --print(string.format("DEBUG: Tick=%d, Status Byte skipped (0x%X). Using Running Status 0x%X.", 
                                     track_time_ticks, status_byte, running_status))
             else
                 -- 新的 Status Byte
                 running_status = status_byte
-                print(string.format("DEBUG: Tick=%d, New Status Byte 0x%X", track_time_ticks, status_byte))
+                --print(string.format("DEBUG: Tick=%d, New Status Byte 0x%X", track_time_ticks, status_byte))
             end
             
             -- 如果触发 Running Status，我们需要重读 Status Byte 字符作为 Data Byte 1
@@ -160,7 +160,7 @@ local function parseMidi()
                 local data_bytes = file:read(2)
                 
                 if not data_bytes or #data_bytes < 2 then
-                    print(string.format("FATAL PARSE ERROR: Expected 2 data bytes for Note Event (Status 0x%X) but got %d bytes. Track sync failed.", status_byte, #data_bytes or 0))
+                    --print(string.format("FATAL PARSE ERROR: Expected 2 data bytes for Note Event (Status 0x%X) but got %d bytes. Track sync failed.", status_byte, #data_bytes or 0))
                     break -- Critical failure, stop parsing this track
                 end
 
@@ -168,7 +168,7 @@ local function parseMidi()
                 local velocity = string.byte(data_bytes, 2)
                 
                 -- 【调试关键点】记录读取到的原始字节
-                print(string.format("DEBUG: Raw Note: Pitch Byte=0x%X (%d), Velocity Byte=0x%X (%d). Status=0x%X", 
+                --print(string.format("DEBUG: Raw Note: Pitch Byte=0x%X (%d), Velocity Byte=0x%X (%d). Status=0x%X", 
                     pitch, pitch, velocity, velocity, status_byte))
                 
                 -- --- Pitch Mapping Logic ---
@@ -226,7 +226,7 @@ local function parseMidi()
                 end
                 
                 file:read(data_bytes_to_read)
-                print(string.format("DEBUG: Channel Message 0x%X detected. Skipping %d data bytes.", status_byte, data_bytes_to_read))
+                --print(string.format("DEBUG: Channel Message 0x%X detected. Skipping %d data bytes.", status_byte, data_bytes_to_read))
 
             -- 【重要改进：处理所有系统消息】
             elseif status_byte >= 0xF0 and status_byte <= 0xFF then
@@ -235,22 +235,22 @@ local function parseMidi()
                 -- F0 (SysEx Start) and F7 (SysEx End/Escape) are handled by VLQ length
                 if status_byte == 0xF0 or status_byte == 0xF7 then
                     local length = read_vlq(file)
-                    print(string.format("DEBUG: SysEx (0x%X) detected, length VLQ=%d. Skipping data.", status_byte, length or 0))
+                    --print(string.format("DEBUG: SysEx (0x%X) detected, length VLQ=%d. Skipping data.", status_byte, length or 0))
                     if length and length > 0 then file:read(length) end
                 
                 -- F1 (Time Code), F3 (Song Select) - 1 data byte
                 elseif status_byte == 0xF1 or status_byte == 0xF3 then
-                    print(string.format("DEBUG: System Common (0x%X) detected. Skipping 1 data byte.", status_byte))
+                    --print(string.format("DEBUG: System Common (0x%X) detected. Skipping 1 data byte.", status_byte))
                     file:read(1)
                 
                 -- F2 (Song Position) - 2 data bytes
                 elseif status_byte == 0xF2 then
-                    print(string.format("DEBUG: System Common (0x%X) detected. Skipping 2 data bytes.", status_byte))
+                    --print(string.format("DEBUG: System Common (0x%X) detected. Skipping 2 data bytes.", status_byte))
                     file:read(2)
                 
                 -- F4, F5 (Undefined) - 0 data bytes, do nothing
                 elseif status_byte == 0xF4 or status_byte == 0xF5 then
-                    print(string.format("DEBUG: Undefined System Common (0x%X) detected. Skipping 0 bytes.", status_byte))
+                    --print(string.format("DEBUG: Undefined System Common (0x%X) detected. Skipping 0 bytes.", status_byte))
                 
                 -- Real-time messages (F8-FE) - 0 data bytes, handled by the receiver, do nothing
                 
@@ -272,41 +272,41 @@ local function parseMidi()
                                 time_ticks = track_time_ticks,
                                 mpqn = new_mpqn
                             })
-                            print(string.format("DEBUG: Meta Tempo (0x%X 0x51) detected. New MPQN: %d.", status_byte, new_mpqn))
+                            --print(string.format("DEBUG: Meta Tempo (0x%X 0x51) detected. New MPQN: %d.", status_byte, new_mpqn))
                             
                         elseif length and length > 0 then
                             -- Skip data bytes for other meta events
                             file:read(length)
-                            print(string.format("DEBUG: Other Meta Event (0x%X 0x%X) detected. Skipping %d data bytes.", status_byte, meta_type, length))
+                            --print(string.format("DEBUG: Other Meta Event (0x%X 0x%X) detected. Skipping %d data bytes.", status_byte, meta_type, length))
                         end
 
                         -- End of Track 事件：0xFF 0x2F 0x00
                         if meta_type == 0x2F and length == 0 then
-                            print("Track End (0xFF 0x2F 0x00)")
+                            --print("Track End (0xFF 0x2F 0x00)")
                             break
                         end
                     end
                 
                 else
                     -- 其他系统消息或实时消息 (F8-FE)，没有数据字节需要跳过
-                    print(string.format("DEBUG: Real-Time or other System Message (0x%X). Skipping 0 bytes.", status_byte))
+                    --print(string.format("DEBUG: Real-Time or other System Message (0x%X). Skipping 0 bytes.", status_byte))
                 end
 
             -- 如果 Status Byte 不是 0x80-0xFF，则文件已损坏或同步严重失败
             else
-                 print(string.format("FATAL PARSE ERROR: Encountered unrecognized byte 0x%X after Delta Time. Track sync failed.", status_byte))
+                 --print(string.format("FATAL PARSE ERROR: Encountered unrecognized byte 0x%X after Delta Time. Track sync failed.", status_byte))
                  break
             end
         end
 
-        print(string.format("Track #%d parsing complete. Found %d Note events.", track_idx, notes_in_track))
+        --print(string.format("Track #%d parsing complete. Found %d Note events.", track_idx, notes_in_track))
         total_notes_found = total_notes_found + notes_in_track
     end
 
     file:close()
     
-    print("\n=======================================")
-    print(string.format("Total Note On events found in file: %d", total_notes_found))
+    --print("\n=======================================")
+    --print(string.format("Total Note On events found in file: %d", total_notes_found))
     
     -- 3. 按 Ticks 绝对时间排序所有事件
     table.sort(event_list, function(a, b)
@@ -326,7 +326,7 @@ end
 --- 播放已排序的事件
 local function playMidi(tpqn_division)
     if #event_list == 0 then
-        print("No events to play.")
+        --print("No events to play.")
         return
     end
 
@@ -339,7 +339,7 @@ local function playMidi(tpqn_division)
     
     local all_notes_verbose = {}
 
-    print("--- Starting Synchronized Playback ---")
+    --print("--- Starting Synchronized Playback ---")
 
     for i, event in ipairs(event_list) do
         -- 1. 处理 Tempo Change 事件
@@ -349,7 +349,7 @@ local function playMidi(tpqn_division)
             if event.time_ticks >= last_event_time_ticks and event.mpqn ~= current_mpqn then
                 current_mpqn = event.mpqn
                 seconds_per_tick = (current_mpqn / 1000000) / tpqn_division
-                print(string.format("  [TEMPO] Absolute Time Ticks: %d, New MPQN=%d (BPM=%.2f), New Seconds/Tick=%.6f", 
+                --print(string.format("  [TEMPO] Absolute Time Ticks: %d, New MPQN=%d (BPM=%.2f), New Seconds/Tick=%.6f", 
                                     event.time_ticks, current_mpqn, 60000000 / current_mpqn, seconds_per_tick))
             end
         end
@@ -377,7 +377,7 @@ local function playMidi(tpqn_division)
             end)
 
             if not ok or not relay then
-                print(string.format("ERROR: Could not find redstone_relay_%d (Mapped Pitch %s). Skipping note.", relay_id, event.mapped_note_name))
+                --print(string.format("ERROR: Could not find redstone_relay_%d (Mapped Pitch %s). Skipping note.", relay_id, event.mapped_note_name))
             else
                 local output_state = (event.type == "note_on")
                 
@@ -388,7 +388,7 @@ local function playMidi(tpqn_division)
                 
                 relay.setOutput("front", output_state)
                 -- 打印详细的映射信息
-                print(string.format("T=%.4f s | %s: Original %s (MIDI %d) -> Mapped to %s (Offset: %d, Relay ID: %d)", 
+                --print(string.format("T=%.4f s | %s: Original %s (MIDI %d) -> Mapped to %s (Offset: %d, Relay ID: %d)", 
                                     current_abs_time_seconds, 
                                     event.type:upper(), 
                                     event.note_name, 
@@ -401,11 +401,7 @@ local function playMidi(tpqn_division)
         
     end
 
-    print("--- Playback Finished ---")
-    if #all_notes_verbose > 0 then
-        print("--- Full Note Sequence (first 20 notes): ---")
-        print(table.concat(all_notes_verbose, " ", 1, math.min(20, #all_notes_verbose)))
-    end
+    --print("--- Playback Finished ---")
 end
 
 -- 1. 执行解析
